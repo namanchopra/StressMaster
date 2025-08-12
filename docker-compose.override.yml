@@ -1,0 +1,36 @@
+# Production overrides for StressMaster
+
+services:
+  ollama:
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT:-4g}
+        reservations:
+          memory: 2g
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  stressmaster:
+    deploy:
+      resources:
+        limits:
+          memory: ${APP_MEMORY_LIMIT:-1g}
+        reservations:
+          memory: 512m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  k6-runner:
+    deploy:
+      resources:
+        limits:
+          memory: ${K6_MEMORY_LIMIT:-2g}
+        reservations:
+          memory: 512m

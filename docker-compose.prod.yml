@@ -1,0 +1,76 @@
+# Production configuration for StressMaster
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+version: "3.8"
+
+services:
+  ollama:
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT:-4g}
+          cpus: "2.0"
+        reservations:
+          memory: 2g
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    healthcheck:
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+
+  stressmaster:
+    deploy:
+      resources:
+        limits:
+          memory: ${APP_MEMORY_LIMIT:-1g}
+          cpus: "1.0"
+        reservations:
+          memory: 512m
+          cpus: "0.5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    healthcheck:
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=768
+
+  k6-runner:
+    deploy:
+      resources:
+        limits:
+          memory: ${K6_MEMORY_LIMIT:-2g}
+          cpus: "2.0"
+        reservations:
+          memory: 512m
+          cpus: "0.5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  model-init:
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"

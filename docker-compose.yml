@@ -1,0 +1,103 @@
+services:
+  # Ollama AI service for natural language processing
+  ollama:
+    image: ollama/ollama:latest
+    container_name: stressmaster-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./scripts:/scripts:ro
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: ${RESTART_POLICY:-unless-stopped}
+    networks:
+      - stressmaster-network
+
+  # Main StressMaster application
+  stressmaster:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: stressmaster-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - shared_data:/app/data
+      - test_results:/app/results
+      - ./scripts:/app/scripts:ro
+    environment:
+      - NODE_ENV=production
+      - OLLAMA_URL=http://ollama:11434
+      - K6_RUNNER_IMAGE=grafana/k6:latest
+      - DATA_DIR=/app/data
+      - SCRIPTS_DIR=/app/scripts/k6
+      - RESULTS_DIR=/app/results
+    depends_on:
+      - ollama
+    command: ["node", "/app/dist/cli.js", "--interactive"]
+    restart: ${RESTART_POLICY:-unless-stopped}
+    networks:
+      - stressmaster-network
+
+  # K6 runner service (on-demand container)
+  k6-runner:
+    image: grafana/k6:latest
+    container_name: stressmaster-k6
+    volumes:
+      - k6_scripts:/scripts:ro
+      - test_results:/results
+    environment:
+      - K6_OUT=json=/results/k6-results.json
+    profiles:
+      - k6-execution
+    networks:
+      - stressmaster-network
+
+  # Model initialization service
+  model-init:
+    image: ollama/ollama:latest
+    container_name: stressmaster-model-init
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./scripts:/scripts:ro
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    command: ["/scripts/init-model.sh"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    profiles:
+      - init
+    networks:
+      - stressmaster-network
+
+volumes:
+  # Persistent storage for Ollama models
+  ollama_data:
+    driver: local
+
+  # Shared data between services
+  shared_data:
+    driver: local
+
+  # K6 scripts storage
+  k6_scripts:
+    driver: local
+
+  # Test results storage
+  test_results:
+    driver: local
+
+networks:
+  stressmaster-network:
+    driver: bridge
+    name: stressmaster-network
