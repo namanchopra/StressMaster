@@ -65,9 +65,6 @@ Once deployed, you can start using the tool:
 ```bash
 # Access the interactive CLI
 docker-compose exec stressmaster npm start
-
-# Or use the web interface
-open http://localhost:3000
 ```
 
 Try your first load test:
