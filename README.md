@@ -472,4 +472,4 @@ docker-compose down -v
 
 ---
 
-\*\*Happy Load Tes
+**Happy Load Testing! 🚀**
