@@ -18,6 +18,10 @@ export interface CompletionRequest {
   maxTokens?: number;
   format?: "json" | "text";
   options?: Record<string, any>;
+  // Enhanced fields for smart parsing
+  systemPrompt?: string;
+  examples?: any[];
+  clarifications?: string[];
 }
 
 export interface CompletionResponse {

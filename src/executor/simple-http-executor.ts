@@ -31,7 +31,11 @@ export class BasicHttpExecutor implements SimpleHttpExecutor {
 
         // Prepare request data
         let requestData: any = undefined;
-        if (request.payload) {
+        if (request.body) {
+          // Use the body directly if it's provided (for literal JSON)
+          requestData = request.body;
+        } else if (request.payload) {
+          // Generate body from payload template if payload is provided
           requestData = this.generateRequestBody(request.payload, i);
         }
 
