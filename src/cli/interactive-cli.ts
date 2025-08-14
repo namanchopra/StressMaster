@@ -797,51 +797,69 @@ export class InteractiveCLI implements CLIInterface {
         enhanced = true;
       }
     }
-    // Detect simple JSON object pattern
-    else if (
-      input.toLowerCase().includes("json") ||
-      input.toLowerCase().includes("body")
-    ) {
-      // Extract key-value pairs from the input
-      const keyValueMatches = input.matchAll(/(\w+)\s+([^\s,}]+)/g);
-      const variables: any[] = [];
-      let template = "{";
+    // Detect complete JSON object in the input
+    else {
+      // First, try to extract a complete JSON object from the input
+      const jsonMatch = input.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+      if (jsonMatch) {
+        try {
+          // Try to parse the JSON to validate it
+          const parsedJson = JSON.parse(jsonMatch[0]);
 
-      for (const match of keyValueMatches) {
-        const key = match[1];
-        const value = match[2];
+          // Use the complete JSON as the body directly (not as a template)
+          spec.requests[0].body = parsedJson;
+          enhancements.push("Complete JSON body");
+          enhanced = true;
+        } catch (error) {
+          // If JSON parsing fails, fall back to the old key-value extraction
+          console.warn(
+            "Failed to parse JSON, falling back to key-value extraction:",
+            error
+          );
 
-        // Skip common words that aren't field names
-        if (
-          ![
-            "send",
-            "post",
-            "get",
-            "put",
-            "delete",
-            "requests",
-            "to",
-            "with",
-            "header",
-            "json",
-            "body",
-            "containing",
-          ].includes(key.toLowerCase())
-        ) {
-          template += `"${key}": "{{${key}}}",`;
-          variables.push({
-            name: key,
-            type: "literal",
-            parameters: { literalValue: value },
-          });
+          // Extract key-value pairs from the input (fallback)
+          const keyValueMatches = input.matchAll(/(\w+)\s+([^\s,}]+)/g);
+          const variables: any[] = [];
+          let template = "{";
+
+          for (const match of keyValueMatches) {
+            const key = match[1];
+            const value = match[2];
+
+            // Skip common words that aren't field names
+            if (
+              ![
+                "send",
+                "post",
+                "get",
+                "put",
+                "delete",
+                "requests",
+                "to",
+                "with",
+                "header",
+                "json",
+                "body",
+                "containing",
+                "key", // Add "key" to skip list to avoid x-api-key interference
+              ].includes(key.toLowerCase())
+            ) {
+              template += `"${key}": "{{${key}}}",`;
+              variables.push({
+                name: key,
+                type: "literal",
+                parameters: { literalValue: value },
+              });
+            }
+          }
+
+          if (variables.length > 0) {
+            template = template.slice(0, -1) + "}"; // Remove last comma and close
+            spec.requests[0].payload = { template, variables };
+            enhancements.push("JSON payload structure");
+            enhanced = true;
+          }
         }
-      }
-
-      if (variables.length > 0) {
-        template = template.slice(0, -1) + "}"; // Remove last comma and close
-        spec.requests[0].payload = { template, variables };
-        enhancements.push("JSON payload structure");
-        enhanced = true;
       }
     }
 

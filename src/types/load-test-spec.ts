@@ -25,6 +25,7 @@ export interface RequestSpec {
   method: HttpMethod;
   url: string;
   headers?: Record<string, string>;
+  body?: any;
   payload?: PayloadSpec;
   validation?: ResponseValidation[];
 }

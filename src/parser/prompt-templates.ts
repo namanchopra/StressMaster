@@ -31,6 +31,11 @@ Key guidelines:
 4. Use reasonable defaults for missing parameters
 5. Extract variable definitions from payload descriptions
 6. Set appropriate load patterns based on the test description
+7. When a complete JSON object is provided in the input, use it EXACTLY as the "body" field - do NOT create template variables
+8. If JSON contains specific values like "requestId": "ai-req-stress29", preserve them as literal values, not as {{requestId}} templates
+9. NEVER extract individual fields from a complete JSON - use the whole JSON object as the body
+
+CRITICAL: If the input contains a complete JSON object like {"requestId": "example123", "payload": [...]}, use it EXACTLY as the "body" field. Do NOT create variables or templates from literal values.
 
 Response format must be valid JSON matching this TypeScript interface:
 {
@@ -159,6 +164,39 @@ Respond with only valid JSON, no additional text or explanation.`;
         duration: {
           value: 10,
           unit: "minutes",
+        },
+      },
+    },
+    {
+      input:
+        'send 3 POST requests to https://api.example.com/orders with header x-api-key abc123 {"requestId": "order-123", "payload": [{"externalId": "ORD#1"}]}',
+      output: {
+        id: "test_" + Date.now(),
+        name: "Load Test Orders API",
+        description:
+          "Send 3 POST requests to orders endpoint with specific JSON payload",
+        testType: "baseline",
+        requests: [
+          {
+            method: "POST",
+            url: "https://api.example.com/orders",
+            headers: {
+              "x-api-key": "abc123",
+              "Content-Type": "application/json",
+            },
+            body: {
+              requestId: "order-123",
+              payload: [{ externalId: "ORD#1" }],
+            },
+          },
+        ],
+        loadPattern: {
+          type: "constant",
+          virtualUsers: 3,
+        },
+        duration: {
+          value: 30,
+          unit: "seconds",
         },
       },
     },
